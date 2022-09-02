@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"group": {
+				"isDefault": true,
+				"kind": "build"
+			},
+			"problemMatcher": [],
+			"label": "npm: build",
+			"detail": "ncc build src/main.ts",
+			"options": {
+				"env": {
+					"NODE_OPTIONS":"--openssl-legacy-provider"
+				}
+			}
+		}
+	]
+}

@@ -1,133 +1,138 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Template } from './template';
 
-async function run() {
-  try {
-    const issueCloseMessage: string = core.getInput('issue-close-message');
-    const prCloseMessage: string = core.getInput('pr-close-message');
-
-    if (!issueCloseMessage && !prCloseMessage) {
-      throw new Error(
-        'Action must have at least one of issue-close-message or pr-close-message set'
-      );
+async function* getTemplates(eventType: string): AsyncIterableIterator<Template> {
+    try {
+        const content = await fs.promises.readFile(`.github/${eventType}.md`, 'utf8');
+        yield new Template(content);
+    } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
     }
 
-    const issuePattern: string = core.getInput('issue-pattern');
-    const prPattern: string = core.getInput('pr-pattern');
-
-    if (!issuePattern && !prPattern) {
-      throw new Error(
-        'Action must have at least one of issue-pattern or pr-pattern set'
-      );
+    const dirpath = `.github/${eventType}`;
+    let files: string[];
+    try {
+        files = await fs.promises.readdir(dirpath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+        return;
     }
-
-    // Get client and context
-    const client: github.GitHub = new github.GitHub(
-      core.getInput('repo-token', {required: true})
-    );
-    const context = github.context;
-    const payload = context.payload;
-
-    if (payload.action !== 'opened') {
-      core.debug('No issue or PR was opened, skipping');
-      return;
+    for (const file of files) {
+        const content = await fs.promises.readFile(path.join(dirpath, file), 'utf8');
+        yield new Template(content);
     }
+}
 
-    // Do nothing if its not a pr or issue
-    const isIssue: boolean = !!payload.issue;
+async function run(): Promise<void> {
+    try {
+        // Get client and context
+        const payload = github.context.payload;
+        if (payload.action !== 'opened') {
+            core.debug('No issue or PR was opened, skipping');
+            return;
+        }
 
-    if (!isIssue && !payload.pull_request) {
-      core.debug(
-        'The event that triggered this action was not a pull request or issue, skipping.'
-      );
-      return;
+        if (payload.sender === undefined) {
+            throw new Error('Internal error, no sender provided by GitHub');
+        }
+
+        if (payload.issue !== undefined) {
+            await processEvent('ISSUE_TEMPLATE', payload.issue.body);
+            return;
+        }
+
+        delete payload.sender;
+        core.debug(
+            `Unexpected event ${Object.keys(payload).join(', ')}. skipping.`
+        );
+    } catch (error) {
+        core.setFailed(error.message);
+        return;
     }
+}
 
-    if (!payload.sender) {
-      throw new Error('Internal error, no sender provided by GitHub');
-    }
-
-    const issue: {owner: string; repo: string; number: number} = context.issue;
-    const patternString: string = isIssue ? issuePattern : prPattern;
-
-    if (!patternString) {
-      core.debug('No pattern provided for this type of contribution');
-      return;
-    }
-
-    const pattern: RegExp = new RegExp(patternString);
-    const body: string | undefined = getBody(payload);
-
-    core.debug(`Matching against pattern ${pattern}`);
-    if (body && body.match(pattern)) {
-      core.debug('Body matched. Nothing more to do.');
-      return;
-    } else {
-      core.debug('Body did not match');
-    }
-
-    // Do nothing if no message set for this type of contribution
-    const closeMessage: string = isIssue ? issueCloseMessage : prCloseMessage;
-
-    if (!closeMessage) {
-      core.debug('No close message template provided for this type of contribution');
-      return;
+async function processEvent(eventType: string, body: string | undefined): Promise<void> {
+    if (body === undefined) {
+        core.debug('no body provided, skipping');
+        return;
     }
 
     core.debug('Creating message from template');
-    const message: string = evalTemplate(closeMessage, payload)
-    const issueType: string = isIssue ? 'issue' : 'pull request';
-
-    // Add a comment to the appropriate place
-    core.debug(`Adding message: ${message} to ${issueType} ${issue.number}`);
-    if (isIssue) {
-      await client.issues.createComment({
-        owner: issue.owner,
-        repo: issue.repo,
-        issue_number: issue.number,
-        body: message
-      });
-      core.debug('Closing issue');
-      await client.issues.update({
-        owner: issue.owner,
-        repo: issue.repo,
-        issue_number: issue.number,
-        state: 'closed'
-      });
-    } else {
-      await client.pulls.createReview({
-        owner: issue.owner,
-        repo: issue.repo,
-        pull_number: issue.number,
-        body: message,
-        event: 'COMMENT'
-      });
-      core.debug('Closing PR');
-      await client.pulls.update({
-        owner: issue.owner,
-        repo: issue.repo,
-        pull_number: issue.number,
-        state: 'closed'
-      });
+    for await (const template of getTemplates(eventType)) {
+        const res = template.check(body);
+        if (res === Template.Result.Matched) return;
+        if (res === Template.Result.HasEgLine) {
+            break;
+        }
     }
-  } catch (error) {
-    core.setFailed(error.message);
-    return;
-  }
+
+    const payload = github.context.payload;
+    const message = `@${payload.issue!.user.login} this issue was automatically closed because it did not follow the issue template`;
+    
+    // Add a comment to the appropriate place
+    const issue = new Issue(createGitHubClient());
+    core.debug(`Adding message: ${message} to issue ${github.context.issue.number}`);
+    issue.comment(message);
+    core.debug('Closing');
+    issue.close();
 }
 
-function getBody(payload): string | undefined {
-  if (payload.issue && payload.issue.body) {
-    return payload.issue.body;
-  }
-
-  if (payload.pull_request && payload.pull_request.body) {
-    return payload.pull_request.body;
-  }
+function createGitHubClient():RestEndpointMethods{
+    return github.getOctokit(core.getInput('repo-token', { required: true })).rest;
 }
 
-function evalTemplate(template, params) {
-  return Function(...Object.keys(params), `return \`${template}\``)(...Object.values(params));
+abstract class GitHubTarget {
+    constructor(public readonly client:RestEndpointMethods) {
+    }
+    
+    abstract comment(message:string):Promise<void>;
+    abstract close():Promise<void>
 }
 
+class Issue extends GitHubTarget {
+    async comment(message:string):Promise<void> {
+        const issue = github.context.issue;
+        await this.client.issues.createComment({
+            owner: issue.owner,
+            repo: issue.repo,
+            issue_number: issue.number,
+            body: message
+        });
+    }
+    async close():Promise<void> {
+        const issue = github.context.issue;
+        await this.client.issues.update({
+            owner: issue.owner,
+            repo: issue.repo,
+            issue_number: issue.number,
+            state: 'closed'
+        });
+    }
+}
+
+class PullRequest extends GitHubTarget {
+    async comment(message:string):Promise<void> {
+        const issue = github.context.issue;
+        await this.client.pulls.createReview({
+            owner: issue.owner,
+            repo: issue.repo,
+            pull_number: issue.number,
+            body: message,
+            event: 'COMMENT'
+        });
+    }
+    async close():Promise<void> {
+        const issue = github.context.issue;
+        await this.client.pulls.update({
+            owner: issue.owner,
+            repo: issue.repo,
+            pull_number: issue.number,
+            state: 'closed'
+        });
+    }
+}
 run();
