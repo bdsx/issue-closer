@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Autoclose issues that did not follow issue template
-      uses: roots/issue-closer@v1.1
+      uses: karikera/issue-closer@v1.1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 ```
