@@ -17,7 +17,7 @@ jobs:
     - name: Autoclose issues that did not follow issue template
       uses: karikera/issue-closer@v1.1
       with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 forked from https://github.com/roots/issue-closer-action

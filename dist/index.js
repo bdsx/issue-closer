@@ -631,7 +631,7 @@ function processEvent(eventType, body) {
     });
 }
 function createGitHubClient() {
-    return github.getOctokit(core.getInput('repo-token', { required: true })).rest;
+    return github.getOctokit(core.getInput('github-token', { required: true })).rest;
 }
 class GitHubTarget {
     constructor(client) {

@@ -82,7 +82,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
 }
 
 function createGitHubClient():RestEndpointMethods{
-    return github.getOctokit(core.getInput('repo-token', { required: true })).rest;
+    return github.getOctokit(core.getInput('github-token', { required: true })).rest;
 }
 
 abstract class GitHubTarget {
