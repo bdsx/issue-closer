@@ -41,7 +41,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
     let reason:Template.Result = Template.Result.NotMatched;
 
     console.log('Read templates');
-    for await (const template of Template.getAll(eventType)) {
+    for await (const template of Template.getAll(process.env.GITHUB_WORKSPACE!, eventType)) {
         console.log('check');
         const res = template.check(body);
         if (res === Template.Result.Matched) return;

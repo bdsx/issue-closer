@@ -15,8 +15,7 @@ export class Template {
             const line = lines.readLine();
             if (line === null) break;
             if (/^\*\*.+\*\*$/.test(line)) {
-                if (line.indexOf('(required)') !== -1) {
-                    console.log(`required line, target: ${line}`);
+                if (line.toLocaleLowerCase().indexOf('(required)') !== -1) {
                     this.requiredLines.push(line);
                     requiredLine = true;
                 } else {
@@ -25,8 +24,8 @@ export class Template {
                 continue;
             } 
             if (requiredLine) {
-                if (/^e\.g\..+$/.test(line)) {
-                    if (line === 'e.g.') {
+                if (line.startsWith('e.g.') || line.startsWith('ex)')) {
+                    if (line === 'e.g.' || line === 'ex)') {
                         const nextLine = lines.readLine();                    
                         if (nextLine === null) break;
                         this.needToRemovesNextLine.add(nextLine);
@@ -51,14 +50,13 @@ export class Template {
             const line = lines.readLine();
             if (line === null) break;
             if (requiredLines.delete(line)) {
-                console.log(`required line, pass: ${line}`);
                 continue;
             }
             if (this.needToRemoves.has(line)) {
                 hasEgLine = true;
                 continue;
             }
-            if (line === 'e.g.') {
+            if (line === 'e.g.' || line === 'ex)') {
                 const nextLine = lines.readLine();
                 if (nextLine === null) break;
                 if (this.needToRemovesNextLine.has(nextLine)) {
@@ -72,8 +70,7 @@ export class Template {
         return Template.Result.Matched;
     }
 
-    static async * getAll(eventType: string): AsyncIterableIterator<Template> {
-        const workspace = process.env.GITHUB_WORKSPACE;
+    static async * getAll(workspace:string, eventType: string): AsyncIterableIterator<Template> {
         let noTemplate = false;
         try {
             const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
@@ -87,20 +84,17 @@ export class Template {
         let files: string[];
         try {
             files = await fs.promises.readdir(dirpath);
+            files = files.filter(file=>file.endsWith('.md'));
         } catch (err) {
             if (err.code !== 'ENOENT') throw err;
             files = [];
-            return;
         }
         if (files.length === 0 && noTemplate) throw Error(`${eventType} template not found`);
     
         for (const file of files) {
-            console.log(`read ${dirpath}/${file}`);
             const content = await fs.promises.readFile(`${dirpath}/${file}`, 'utf8');
-            console.log(`create template`);
             yield new Template(content);
         }
-        console.log(`done`);
     }
     
 }
