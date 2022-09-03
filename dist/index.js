@@ -518,18 +518,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __await = (this && this.__await) || function (v) { return this instanceof __await ? (this.v = v, this) : new __await(v); }
-var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _arguments, generator) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var g = generator.apply(thisArg, _arguments || []), i, q = [];
-    return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
-    function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
-    function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
-    function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
-    function fulfill(value) { resume("next", value); }
-    function reject(value) { resume("throw", value); }
-    function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
-};
 var __asyncValues = (this && this.__asyncValues) || function (o) {
     if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
     var m = o[Symbol.asyncIterator], i;
@@ -540,41 +528,7 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
-const fs = __importStar(__webpack_require__(747));
-const path = __importStar(__webpack_require__(622));
 const template_1 = __webpack_require__(565);
-function getTemplates(eventType) {
-    return __asyncGenerator(this, arguments, function* getTemplates_1() {
-        const workspace = process.env.GITHUB_WORKSPACE;
-        let noTemplate = false;
-        try {
-            const content = yield __await(fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8'));
-            yield yield __await(new template_1.Template(content));
-        }
-        catch (err) {
-            if (err.code !== 'ENOENT')
-                throw err;
-            noTemplate = true;
-        }
-        const dirpath = `${workspace}/.github/${eventType}`;
-        let files;
-        try {
-            files = yield __await(fs.promises.readdir(dirpath));
-        }
-        catch (err) {
-            if (err.code !== 'ENOENT')
-                throw err;
-            files = [];
-            return yield __await(void 0);
-        }
-        if (files.length === 0 && noTemplate)
-            throw Error(`${eventType} template not found`);
-        for (const file of files) {
-            const content = yield __await(fs.promises.readFile(path.join(dirpath, file), 'utf8'));
-            yield yield __await(new template_1.Template(content));
-        }
-    });
-}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -595,6 +549,7 @@ function run() {
             console.log(`Unexpected event ${Object.keys(payload).join(', ')}. skipping.`);
         }
         catch (error) {
+            console.error(error.message);
             core.setFailed(error.message);
             return;
         }
@@ -610,7 +565,7 @@ function processEvent(eventType, body) {
         let reason = template_1.Template.Result.NotMatched;
         console.log('Read templates');
         try {
-            for (var _b = __asyncValues(getTemplates(eventType)), _c; _c = yield _b.next(), !_c.done;) {
+            for (var _b = __asyncValues(template_1.Template.getAll(eventType)), _c; _c = yield _b.next(), !_c.done;) {
                 const template = _c.value;
                 const res = template.check(body);
                 if (res === template_1.Template.Result.Matched)
@@ -5828,8 +5783,44 @@ exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHand
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __await = (this && this.__await) || function (v) { return this instanceof __await ? (this.v = v, this) : new __await(v); }
+var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _arguments, generator) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var g = generator.apply(thisArg, _arguments || []), i, q = [];
+    return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
+    function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
+    function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
+    function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
+    function fulfill(value) { resume("next", value); }
+    function reject(value) { resume("throw", value); }
+    function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Template = void 0;
+const fs = __importStar(__webpack_require__(747));
 const linereader_1 = __webpack_require__(987);
 class Template {
     constructor(content) {
@@ -5904,6 +5895,46 @@ class Template {
         if (hasEgLine)
             return Template.Result.HasEgLine;
         return Template.Result.Matched;
+    }
+    static getAll(eventType) {
+        return __asyncGenerator(this, arguments, function* getAll_1() {
+            const workspace = process.env.GITHUB_WORKSPACE;
+            let noTemplate = false;
+            try {
+                console.log(`read ${workspace}/.github/${eventType}.md`);
+                const content = yield __await(fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8'));
+                console.log(`create template`);
+                yield yield __await(new Template(content));
+            }
+            catch (err) {
+                console.log(`failed to read`);
+                if (err.code !== 'ENOENT')
+                    throw err;
+                noTemplate = true;
+            }
+            const dirpath = `${workspace}/.github/${eventType}`;
+            let files;
+            try {
+                console.log(`read dirs`);
+                files = yield __await(fs.promises.readdir(dirpath));
+            }
+            catch (err) {
+                console.log(`failed to read`);
+                if (err.code !== 'ENOENT')
+                    throw err;
+                files = [];
+                return yield __await(void 0);
+            }
+            if (files.length === 0 && noTemplate)
+                throw Error(`${eventType} template not found`);
+            for (const file of files) {
+                console.log(`read ${dirpath}/${file}`);
+                const content = yield __await(fs.promises.readFile(`${dirpath}/${file}`, 'utf8'));
+                console.log(`create template`);
+                yield yield __await(new Template(content));
+            }
+            console.log(`done`);
+        });
     }
 }
 exports.Template = Template;

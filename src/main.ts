@@ -1,37 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Template } from './template';
-
-async function* getTemplates(eventType: string): AsyncIterableIterator<Template> {
-    const workspace = process.env.GITHUB_WORKSPACE;
-    let noTemplate = false;
-    try {
-        const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
-        yield new Template(content);
-    } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
-        noTemplate = true;
-    }
-
-    const dirpath = `${workspace}/.github/${eventType}`;
-    let files: string[];
-    try {
-        files = await fs.promises.readdir(dirpath);
-    } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
-        files = [];
-        return;
-    }
-    if (files.length === 0 && noTemplate) throw Error(`${eventType} template not found`);
-
-    for (const file of files) {
-        const content = await fs.promises.readFile(path.join(dirpath, file), 'utf8');
-        yield new Template(content);
-    }
-}
 
 async function run(): Promise<void> {
     try {
@@ -56,6 +26,7 @@ async function run(): Promise<void> {
             `Unexpected event ${Object.keys(payload).join(', ')}. skipping.`
         );
     } catch (error) {
+        console.error(error.message);
         core.setFailed(error.message);
         return;
     }
@@ -70,7 +41,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
     let reason:Template.Result = Template.Result.NotMatched;
 
     console.log('Read templates');
-    for await (const template of getTemplates(eventType)) {
+    for await (const template of Template.getAll(eventType)) {
         const res = template.check(body);
         if (res === Template.Result.Matched) return;
         if (res === Template.Result.HasEgLine) {
