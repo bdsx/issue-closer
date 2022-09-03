@@ -575,7 +575,7 @@ function run() {
             // Get client and context
             const payload = github.context.payload;
             if (payload.action !== 'opened') {
-                core.debug('No issue or PR was opened, skipping');
+                console.log('No issue or PR was opened, skipping');
                 return;
             }
             if (payload.sender === undefined) {
@@ -586,7 +586,7 @@ function run() {
                 return;
             }
             delete payload.sender;
-            core.debug(`Unexpected event ${Object.keys(payload).join(', ')}. skipping.`);
+            console.log(`Unexpected event ${Object.keys(payload).join(', ')}. skipping.`);
         }
         catch (error) {
             core.setFailed(error.message);
@@ -598,10 +598,11 @@ function processEvent(eventType, body) {
     var e_1, _a;
     return __awaiter(this, void 0, void 0, function* () {
         if (body === undefined) {
-            core.debug('no body provided, skipping');
+            console.log('no body provided, skipping');
             return;
         }
-        core.debug('Creating message from template');
+        let reason = template_1.Template.Result.NotMatched;
+        console.log('Creating message from template');
         try {
             for (var _b = __asyncValues(getTemplates(eventType)), _c; _c = yield _b.next(), !_c.done;) {
                 const template = _c.value;
@@ -609,6 +610,7 @@ function processEvent(eventType, body) {
                 if (res === template_1.Template.Result.Matched)
                     return;
                 if (res === template_1.Template.Result.HasEgLine) {
+                    reason = template_1.Template.Result.HasEgLine;
                     break;
                 }
             }
@@ -621,12 +623,22 @@ function processEvent(eventType, body) {
             finally { if (e_1) throw e_1.error; }
         }
         const payload = github.context.payload;
-        const message = `@${payload.issue.user.login} this issue was automatically closed because it did not follow the issue template`;
+        let message = `@${payload.issue.user.login} this issue was automatically closed because it did not follow the issue template`;
+        switch (reason) {
+            case template_1.Template.Result.HasEgLine:
+                message += '\nPlease fill in the form.';
+                break;
+            case template_1.Template.Result.NotMatched:
+                message += '\nPlease do not delete required items.';
+                break;
+        }
+        ;
         // Add a comment to the appropriate place
         const issue = new Issue(createGitHubClient());
-        core.debug(`Adding message: ${message} to issue ${github.context.issue.number}`);
+        console.log(`Issue number: ${github.context.issue.number}`);
+        console.log(`Adding message: ${message}`);
         issue.comment(message);
-        core.debug('Closing');
+        console.log('Closing');
         issue.close();
     });
 }
@@ -5818,25 +5830,38 @@ class Template {
         this.needToRemoves = new Set();
         this.needToRemovesNextLine = new Set();
         const lines = new linereader_1.LineReader(content);
+        let requiredLine = false;
         for (;;) {
             const line = lines.readLine();
             if (line === null)
                 break;
-            if (/^\*\*.+\*\*$/.test(line) && line.indexOf('(required)') !== -1) {
-                this.requiredLines.push(line);
-                continue;
-            }
-            if (/^e\.g\..+$/.test(line)) {
-                if (line === 'e.g.') {
-                    const nextLine = lines.readLine();
-                    if (nextLine === null)
-                        break;
-                    this.needToRemovesNextLine.add(nextLine);
+            if (/^\*\*.+\*\*$/.test(line)) {
+                if (line.indexOf('(required)') !== -1) {
+                    this.requiredLines.push(line);
+                    requiredLine = true;
                 }
                 else {
-                    this.needToRemoves.add(line);
+                    requiredLine = false;
                 }
                 continue;
+            }
+            if (requiredLine) {
+                if (/^e\.g\..+$/.test(line)) {
+                    if (line === 'e.g.') {
+                        const nextLine = lines.readLine();
+                        if (nextLine === null)
+                            break;
+                        this.needToRemovesNextLine.add(nextLine);
+                    }
+                    else {
+                        this.needToRemoves.add(line);
+                    }
+                    continue;
+                }
+                if (/\[e\.g\.[^\]]*\]/.test(line)) {
+                    this.needToRemoves.add(line);
+                    continue;
+                }
             }
         }
     }
@@ -9951,6 +9976,7 @@ class LineReader {
     constructor(content) {
         this.content = content;
         this.index = 0;
+        this.lineNumber = 0;
     }
     readLine() {
         const next = this.content.indexOf('\n', this.index);
@@ -9960,6 +9986,7 @@ class LineReader {
         }
         const out = this.content.substring(this.index, next);
         this.index = next + 1;
+        this.lineNumber++;
         return out.trim();
     }
     readLinesTo(target) {
