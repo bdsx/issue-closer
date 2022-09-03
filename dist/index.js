@@ -547,8 +547,10 @@ async function processEvent(eventType, body) {
     for await (const template of template_1.Template.getAll(process.env.GITHUB_WORKSPACE, eventType)) {
         console.log('check');
         const res = template.check(body);
-        if (res === template_1.Template.Result.Matched)
+        if (res === template_1.Template.Result.Matched) {
+            console.log(`Matched with ${template.name}`);
             return;
+        }
         if (res === template_1.Template.Result.HasEgLine) {
             reason = template_1.Template.Result.HasEgLine;
             break;
@@ -5773,7 +5775,8 @@ exports.Template = void 0;
 const fs = __importStar(__webpack_require__(747));
 const linereader_1 = __webpack_require__(987);
 class Template {
-    constructor(content) {
+    constructor(name, content) {
+        this.name = name;
         this.requiredLines = [];
         this.needToRemoves = new Set();
         this.needToRemovesNextLine = new Set();
@@ -5848,7 +5851,7 @@ class Template {
         let noTemplate = false;
         try {
             const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
-            yield new Template(content);
+            yield new Template(`${eventType}.md`, content);
         }
         catch (err) {
             if (err.code !== 'ENOENT')
@@ -5870,7 +5873,7 @@ class Template {
             throw Error(`${eventType} template not found`);
         for (const file of files) {
             const content = await fs.promises.readFile(`${dirpath}/${file}`, 'utf8');
-            yield new Template(content);
+            yield new Template(file, content);
         }
     }
 }

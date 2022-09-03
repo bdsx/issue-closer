@@ -6,7 +6,7 @@ export class Template {
     private readonly needToRemoves = new Set<string>();
     private readonly needToRemovesNextLine = new Set<string>();
 
-    constructor(content: string) {
+    constructor(public readonly name:string, content: string) {
         const lines = new LineReader(content);
         
         let requiredLine = false;
@@ -74,7 +74,7 @@ export class Template {
         let noTemplate = false;
         try {
             const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
-            yield new Template(content);
+            yield new Template(`${eventType}.md`, content);
         } catch (err) {
             if (err.code !== 'ENOENT') throw err;
             noTemplate = true;
@@ -93,7 +93,7 @@ export class Template {
     
         for (const file of files) {
             const content = await fs.promises.readFile(`${dirpath}/${file}`, 'utf8');
-            yield new Template(content);
+            yield new Template(file, content);
         }
     }
     

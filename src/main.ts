@@ -44,7 +44,10 @@ async function processEvent(eventType: string, body: string | undefined): Promis
     for await (const template of Template.getAll(process.env.GITHUB_WORKSPACE!, eventType)) {
         console.log('check');
         const res = template.check(body);
-        if (res === Template.Result.Matched) return;
+        if (res === Template.Result.Matched) {
+            console.log(`Matched with ${template.name}`);
+            return;
+        }
         if (res === Template.Result.HasEgLine) {
             reason = Template.Result.HasEgLine;
             break;
