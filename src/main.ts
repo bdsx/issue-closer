@@ -6,16 +6,18 @@ import * as path from 'path';
 import { Template } from './template';
 
 async function* getTemplates(eventType: string): AsyncIterableIterator<Template> {
+    const workspace = process.env.GITHUB_WORKSPACE;
+    console.log(workspace);
     let noTemplate = false;
     try {
-        const content = await fs.promises.readFile(`.github/${eventType}.md`, 'utf8');
+        const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
         yield new Template(content);
     } catch (err) {
         if (err.code !== 'ENOENT') throw err;
         noTemplate = true;
     }
 
-    const dirpath = `.github/${eventType}`;
+    const dirpath = `${workspace}/.github/${eventType}`;
     let files: string[];
     try {
         files = await fs.promises.readdir(dirpath);

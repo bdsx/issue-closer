@@ -545,9 +545,11 @@ const path = __importStar(__webpack_require__(622));
 const template_1 = __webpack_require__(565);
 function getTemplates(eventType) {
     return __asyncGenerator(this, arguments, function* getTemplates_1() {
+        const workspace = process.env.GITHUB_WORKSPACE;
+        console.log(workspace);
         let noTemplate = false;
         try {
-            const content = yield __await(fs.promises.readFile(`.github/${eventType}.md`, 'utf8'));
+            const content = yield __await(fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8'));
             yield yield __await(new template_1.Template(content));
         }
         catch (err) {
@@ -555,7 +557,7 @@ function getTemplates(eventType) {
                 throw err;
             noTemplate = true;
         }
-        const dirpath = `.github/${eventType}`;
+        const dirpath = `${workspace}/.github/${eventType}`;
         let files;
         try {
             files = yield __await(fs.promises.readdir(dirpath));
