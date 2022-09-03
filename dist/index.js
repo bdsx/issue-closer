@@ -636,7 +636,7 @@ function processEvent(eventType, body) {
         // Add a comment to the appropriate place
         const issue = new Issue(createGitHubClient());
         console.log(`Issue number: ${github.context.issue.number}`);
-        console.log(`Adding message: ${message}`);
+        console.log(`Adding message: ${message.replace(/\n/g, '\n  ')}`);
         issue.comment(message);
         console.log('Closing');
         issue.close();
@@ -5837,6 +5837,7 @@ class Template {
                 break;
             if (/^\*\*.+\*\*$/.test(line)) {
                 if (line.indexOf('(required)') !== -1) {
+                    console.log(`required line, target: ${line}`);
                     this.requiredLines.push(line);
                     requiredLine = true;
                 }
@@ -5873,8 +5874,10 @@ class Template {
             const line = lines.readLine();
             if (line === null)
                 break;
-            if (requiredLines.delete(line))
+            if (requiredLines.delete(line)) {
+                console.log(`required line, pass: ${line}`);
                 continue;
+            }
             if (this.needToRemoves.has(line)) {
                 hasEgLine = true;
                 continue;

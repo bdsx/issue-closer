@@ -15,6 +15,7 @@ export class Template {
             if (line === null) break;
             if (/^\*\*.+\*\*$/.test(line)) {
                 if (line.indexOf('(required)') !== -1) {
+                    console.log(`required line, target: ${line}`);
                     this.requiredLines.push(line);
                     requiredLine = true;
                 } else {
@@ -48,7 +49,10 @@ export class Template {
         for (;;) {
             const line = lines.readLine();
             if (line === null) break;
-            if (requiredLines.delete(line)) continue;
+            if (requiredLines.delete(line)) {
+                console.log(`required line, pass: ${line}`);
+                continue;
+            }
             if (this.needToRemoves.has(line)) {
                 hasEgLine = true;
                 continue;

@@ -88,7 +88,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
     // Add a comment to the appropriate place
     const issue = new Issue(createGitHubClient());
     console.log(`Issue number: ${github.context.issue.number}`);
-    console.log(`Adding message: ${message}`);
+    console.log(`Adding message: ${message.replace(/\n/g, '\n  ')}`);
     issue.comment(message);
     console.log('Closing');
     issue.close();
