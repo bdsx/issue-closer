@@ -14,10 +14,13 @@ jobs:
   autoclose:
     runs-on: ubuntu-latest
     steps:
-    - name: Autoclose issues that did not follow issue template
-      uses: karikera/issue-closer@v1.1
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: check issue
+        uses: karikera/issue-closer@HEAD
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
 ```
 
 forked from https://github.com/roots/issue-closer-action

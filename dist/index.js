@@ -545,6 +545,7 @@ const path = __importStar(__webpack_require__(622));
 const template_1 = __webpack_require__(565);
 function getTemplates(eventType) {
     return __asyncGenerator(this, arguments, function* getTemplates_1() {
+        let noTemplate = false;
         try {
             const content = yield __await(fs.promises.readFile(`.github/${eventType}.md`, 'utf8'));
             yield yield __await(new template_1.Template(content));
@@ -552,6 +553,7 @@ function getTemplates(eventType) {
         catch (err) {
             if (err.code !== 'ENOENT')
                 throw err;
+            noTemplate = true;
         }
         const dirpath = `.github/${eventType}`;
         let files;
@@ -561,8 +563,11 @@ function getTemplates(eventType) {
         catch (err) {
             if (err.code !== 'ENOENT')
                 throw err;
+            files = [];
             return yield __await(void 0);
         }
+        if (files.length === 0 && noTemplate)
+            throw Error(`${eventType} template not found`);
         for (const file of files) {
             const content = yield __await(fs.promises.readFile(path.join(dirpath, file), 'utf8'));
             yield yield __await(new template_1.Template(content));

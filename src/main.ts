@@ -6,11 +6,13 @@ import * as path from 'path';
 import { Template } from './template';
 
 async function* getTemplates(eventType: string): AsyncIterableIterator<Template> {
+    let noTemplate = false;
     try {
         const content = await fs.promises.readFile(`.github/${eventType}.md`, 'utf8');
         yield new Template(content);
     } catch (err) {
         if (err.code !== 'ENOENT') throw err;
+        noTemplate = true;
     }
 
     const dirpath = `.github/${eventType}`;
@@ -19,8 +21,11 @@ async function* getTemplates(eventType: string): AsyncIterableIterator<Template>
         files = await fs.promises.readdir(dirpath);
     } catch (err) {
         if (err.code !== 'ENOENT') throw err;
+        files = [];
         return;
     }
+    if (files.length === 0 && noTemplate) throw Error(`${eventType} template not found`);
+
     for (const file of files) {
         const content = await fs.promises.readFile(path.join(dirpath, file), 'utf8');
         yield new Template(content);
