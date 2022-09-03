@@ -544,7 +544,7 @@ async function processEvent(eventType, body) {
     }
     let reason = template_1.Template.Result.NotMatched;
     console.log('Read templates');
-    for await (const template of template_1.Template.getAll(eventType)) {
+    for await (const template of template_1.Template.getAll(process.env.GITHUB_WORKSPACE, eventType)) {
         console.log('check');
         const res = template.check(body);
         if (res === template_1.Template.Result.Matched)
@@ -5784,8 +5784,7 @@ class Template {
             if (line === null)
                 break;
             if (/^\*\*.+\*\*$/.test(line)) {
-                if (line.indexOf('(required)') !== -1) {
-                    console.log(`required line, target: ${line}`);
+                if (line.toLocaleLowerCase().indexOf('(required)') !== -1) {
                     this.requiredLines.push(line);
                     requiredLine = true;
                 }
@@ -5795,8 +5794,8 @@ class Template {
                 continue;
             }
             if (requiredLine) {
-                if (/^e\.g\..+$/.test(line)) {
-                    if (line === 'e.g.') {
+                if (line.startsWith('e.g.') || line.startsWith('ex)')) {
+                    if (line === 'e.g.' || line === 'ex)') {
                         const nextLine = lines.readLine();
                         if (nextLine === null)
                             break;
@@ -5823,14 +5822,13 @@ class Template {
             if (line === null)
                 break;
             if (requiredLines.delete(line)) {
-                console.log(`required line, pass: ${line}`);
                 continue;
             }
             if (this.needToRemoves.has(line)) {
                 hasEgLine = true;
                 continue;
             }
-            if (line === 'e.g.') {
+            if (line === 'e.g.' || line === 'ex)') {
                 const nextLine = lines.readLine();
                 if (nextLine === null)
                     break;
@@ -5846,8 +5844,7 @@ class Template {
             return Template.Result.HasEgLine;
         return Template.Result.Matched;
     }
-    static async *getAll(eventType) {
-        const workspace = process.env.GITHUB_WORKSPACE;
+    static async *getAll(workspace, eventType) {
         let noTemplate = false;
         try {
             const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
@@ -5862,22 +5859,19 @@ class Template {
         let files;
         try {
             files = await fs.promises.readdir(dirpath);
+            files = files.filter(file => file.endsWith('.md'));
         }
         catch (err) {
             if (err.code !== 'ENOENT')
                 throw err;
             files = [];
-            return;
         }
         if (files.length === 0 && noTemplate)
             throw Error(`${eventType} template not found`);
         for (const file of files) {
-            console.log(`read ${dirpath}/${file}`);
             const content = await fs.promises.readFile(`${dirpath}/${file}`, 'utf8');
-            console.log(`create template`);
             yield new Template(content);
         }
-        console.log(`done`);
     }
 }
 exports.Template = Template;
