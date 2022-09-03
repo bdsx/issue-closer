@@ -32,7 +32,7 @@ async function run(): Promise<void> {
         // Get client and context
         const payload = github.context.payload;
         if (payload.action !== 'opened') {
-            core.debug('No issue or PR was opened, skipping');
+            console.log('No issue or PR was opened, skipping');
             return;
         }
 
@@ -46,7 +46,7 @@ async function run(): Promise<void> {
         }
 
         delete payload.sender;
-        core.debug(
+        console.log(
             `Unexpected event ${Object.keys(payload).join(', ')}. skipping.`
         );
     } catch (error) {
@@ -57,27 +57,39 @@ async function run(): Promise<void> {
 
 async function processEvent(eventType: string, body: string | undefined): Promise<void> {
     if (body === undefined) {
-        core.debug('no body provided, skipping');
+        console.log('no body provided, skipping');
         return;
     }
 
-    core.debug('Creating message from template');
+    let reason:Template.Result = Template.Result.NotMatched;
+
+    console.log('Creating message from template');
     for await (const template of getTemplates(eventType)) {
         const res = template.check(body);
         if (res === Template.Result.Matched) return;
         if (res === Template.Result.HasEgLine) {
+            reason = Template.Result.HasEgLine;
             break;
         }
     }
 
     const payload = github.context.payload;
-    const message = `@${payload.issue!.user.login} this issue was automatically closed because it did not follow the issue template`;
+    let message = `@${payload.issue!.user.login} this issue was automatically closed because it did not follow the issue template`;
+    
+    switch (reason) {
+    case Template.Result.HasEgLine:
+        message += '\nPlease fill in the form.';
+        break;
+    case Template.Result.NotMatched:
+        message += '\nPlease do not delete required items.';
+        break;
+    };
     
     // Add a comment to the appropriate place
     const issue = new Issue(createGitHubClient());
-    core.debug(`Adding message: ${message} to issue ${github.context.issue.number}`);
+    console.log(`Adding message: ${message} to issue ${github.context.issue.number}`);
     issue.comment(message);
-    core.debug('Closing');
+    console.log('Closing');
     issue.close();
 }
 

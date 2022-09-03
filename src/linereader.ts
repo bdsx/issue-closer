@@ -1,6 +1,8 @@
 
 export class LineReader {
     private index = 0;
+    public lineNumber = 0;
+
     constructor(
         private readonly content:string,
     ) {
@@ -14,6 +16,7 @@ export class LineReader {
         }
         const out = this.content.substring(this.index, next);
         this.index = next+1;
+        this.lineNumber++;
         return out.trim();
     }
 

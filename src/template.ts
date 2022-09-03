@@ -7,22 +7,36 @@ export class Template {
 
     constructor(content: string) {
         const lines = new LineReader(content);
+        
+        let requiredLine = false;
+
         for (;;) {
             const line = lines.readLine();
             if (line === null) break;
-            if (/^\*\*.+\*\*$/.test(line) && line.indexOf('(required)') !== -1) {
-                this.requiredLines.push(line);
-                continue;
-            } 
-            if (/^e\.g\..+$/.test(line)) {
-                if (line === 'e.g.') {
-                    const nextLine = lines.readLine();                    
-                    if (nextLine === null) break;
-                    this.needToRemovesNextLine.add(nextLine);
+            if (/^\*\*.+\*\*$/.test(line)) {
+                if (line.indexOf('(required)') !== -1) {
+                    this.requiredLines.push(line);
+                    requiredLine = true;
                 } else {
-                    this.needToRemoves.add(line);
+                    requiredLine = false;
                 }
                 continue;
+            } 
+            if (requiredLine) {
+                if (/^e\.g\..+$/.test(line)) {
+                    if (line === 'e.g.') {
+                        const nextLine = lines.readLine();                    
+                        if (nextLine === null) break;
+                        this.needToRemovesNextLine.add(nextLine);
+                    } else {
+                        this.needToRemoves.add(line);
+                    }
+                    continue;
+                }
+                if (/\[e\.g\.[^\]]*\]/.test(line)) {
+                    this.needToRemoves.add(line);
+                    continue;
+                }
             }
         }
     }
