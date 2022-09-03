@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import { LineReader } from "./linereader";
 
 export class Template {
@@ -77,12 +76,9 @@ export class Template {
         const workspace = process.env.GITHUB_WORKSPACE;
         let noTemplate = false;
         try {
-            console.log(`read ${workspace}/.github/${eventType}.md`);
             const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
-            console.log(`create template`);
             yield new Template(content);
         } catch (err) {
-            console.log(`failed to read`);
             if (err.code !== 'ENOENT') throw err;
             noTemplate = true;
         }
@@ -90,10 +86,8 @@ export class Template {
         const dirpath = `${workspace}/.github/${eventType}`;
         let files: string[];
         try {
-            console.log(`read dirs`);
             files = await fs.promises.readdir(dirpath);
         } catch (err) {
-            console.log(`failed to read`);
             if (err.code !== 'ENOENT') throw err;
             files = [];
             return;

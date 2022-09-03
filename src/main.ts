@@ -42,6 +42,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
 
     console.log('Read templates');
     for await (const template of Template.getAll(eventType)) {
+        console.log('check');
         const res = template.check(body);
         if (res === Template.Result.Matched) return;
         if (res === Template.Result.HasEgLine) {
