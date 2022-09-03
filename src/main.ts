@@ -7,7 +7,6 @@ import { Template } from './template';
 
 async function* getTemplates(eventType: string): AsyncIterableIterator<Template> {
     const workspace = process.env.GITHUB_WORKSPACE;
-    console.log(workspace);
     let noTemplate = false;
     try {
         const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
@@ -70,7 +69,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
 
     let reason:Template.Result = Template.Result.NotMatched;
 
-    console.log('Creating message from template');
+    console.log('Read templates');
     for await (const template of getTemplates(eventType)) {
         const res = template.check(body);
         if (res === Template.Result.Matched) return;
@@ -80,6 +79,7 @@ async function processEvent(eventType: string, body: string | undefined): Promis
         }
     }
 
+    console.log('prepare rest api');
     const payload = github.context.payload;
     let message = `@${payload.issue!.user.login} this issue was automatically closed because it did not follow the issue template`;
     

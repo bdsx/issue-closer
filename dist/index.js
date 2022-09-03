@@ -546,7 +546,6 @@ const template_1 = __webpack_require__(565);
 function getTemplates(eventType) {
     return __asyncGenerator(this, arguments, function* getTemplates_1() {
         const workspace = process.env.GITHUB_WORKSPACE;
-        console.log(workspace);
         let noTemplate = false;
         try {
             const content = yield __await(fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8'));
@@ -609,7 +608,7 @@ function processEvent(eventType, body) {
             return;
         }
         let reason = template_1.Template.Result.NotMatched;
-        console.log('Creating message from template');
+        console.log('Read templates');
         try {
             for (var _b = __asyncValues(getTemplates(eventType)), _c; _c = yield _b.next(), !_c.done;) {
                 const template = _c.value;
@@ -629,6 +628,7 @@ function processEvent(eventType, body) {
             }
             finally { if (e_1) throw e_1.error; }
         }
+        console.log('prepare rest api');
         const payload = github.context.payload;
         let message = `@${payload.issue.user.login} this issue was automatically closed because it did not follow the issue template`;
         switch (reason) {
