@@ -1,5 +1,6 @@
-import * as fs from 'fs';
+import { getAllTemplate } from './github_util';
 import { LineReader } from "./linereader";
+import { MatchResult } from './matchres';
 
 export class Template {
     private readonly requiredLines: string[] = [];
@@ -42,7 +43,7 @@ export class Template {
         }
     }
 
-    check(content: string): Template.Result {
+    check(content: string): MatchResult {
         const requiredLines = new Set(this.requiredLines);
         const lines = new LineReader(content);
         let hasEgLine = false;
@@ -65,45 +66,15 @@ export class Template {
                 }
             }
         }
-        if (requiredLines.size !== 0) return Template.Result.NotMatched;
-        if (hasEgLine) return Template.Result.HasEgLine;
-        return Template.Result.Matched;
+        if (requiredLines.size !== 0) return MatchResult.NotMatched;
+        if (hasEgLine) return MatchResult.ContentNotChanged;
+        return MatchResult.Matched;
     }
 
     static async * getAll(workspace:string, eventType: string): AsyncIterableIterator<Template> {
-        let noTemplate = false;
-        try {
-            const content = await fs.promises.readFile(`${workspace}/.github/${eventType}.md`, 'utf8');
-            yield new Template(`${eventType}.md`, content);
-        } catch (err) {
-            if (err.code !== 'ENOENT') throw err;
-            noTemplate = true;
-        }
-    
-        const dirpath = `${workspace}/.github/${eventType}`;
-        let files: string[];
-        try {
-            files = await fs.promises.readdir(dirpath);
-            files = files.filter(file=>file.endsWith('.md'));
-        } catch (err) {
-            if (err.code !== 'ENOENT') throw err;
-            files = [];
-        }
-        if (files.length === 0 && noTemplate) throw Error(`${eventType} template not found`);
-    
-        for (const file of files) {
-            const content = await fs.promises.readFile(`${dirpath}/${file}`, 'utf8');
-            yield new Template(file, content);
+        for await (const {name, content} of getAllTemplate(workspace, eventType)) {
+            yield new Template(name, content);
         }
     }
     
-}
-
-
-export namespace Template {
-    export enum Result {
-        Matched,
-        NotMatched,
-        HasEgLine,
-    }
 }

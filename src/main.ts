@@ -1,7 +1,8 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types';
-import { Template } from './template';
+import { Doc } from './doc';
+import { MatchResult } from './matchres';
 
 async function run(): Promise<void> {
     try {
@@ -38,18 +39,19 @@ async function processEvent(eventType: string, body: string | undefined): Promis
         return;
     }
 
-    let reason:Template.Result = Template.Result.NotMatched;
+    let reason:MatchResult = MatchResult.NotMatched;
 
     console.log('Read templates');
-    for await (const template of Template.getAll(process.env.GITHUB_WORKSPACE!, eventType)) {
+    const doc = Doc.parse(eventType, body);
+    for await (const template of Doc.templates(process.env.GITHUB_WORKSPACE!, eventType)) {
         console.log('check');
-        const res = template.check(body);
-        if (res === Template.Result.Matched) {
+        const res = doc.templateCheck(template);
+        if (res === MatchResult.Matched) {
             console.log(`Matched with ${template.name}`);
             return;
         }
-        if (res === Template.Result.HasEgLine) {
-            reason = Template.Result.HasEgLine;
+        if (res === MatchResult.ContentNotChanged) {
+            reason = MatchResult.ContentNotChanged;
             break;
         }
     }
@@ -59,10 +61,10 @@ async function processEvent(eventType: string, body: string | undefined): Promis
     let message = `@${payload.issue!.user.login} this issue was automatically closed because it did not follow the issue template`;
     
     switch (reason) {
-    case Template.Result.HasEgLine:
+    case MatchResult.ContentNotChanged:
         message += '\nPlease fill in the form.';
         break;
-    case Template.Result.NotMatched:
+    case MatchResult.NotMatched:
         message += '\nPlease do not delete required items.';
         break;
     };
