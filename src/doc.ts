@@ -67,7 +67,7 @@ export class Doc {
             if (line === null) break;
             line = line.trim();
             if (line === '') continue;
-            if (/^\*\*.+\*\*$/.test(line) || line.startsWith('#')) {
+            if (/^\*\*.+\*\*\?$/.test(line) || line.startsWith('#')) {
                 item = new Doc.Item(line);
                 doc.items.push(item);
             } else {
